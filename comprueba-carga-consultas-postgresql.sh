@@ -1,6 +1,6 @@
 #!/bin/bash
 # En este script se realiza una comprobación del estado de las consultas de postgresql a traves del comando ps -aux y si sobrepasa el limite, enviará un correo al cliente informandolo
-
+# EN PROCESO DE MEJORA Y CONSTRUCCIÓN
 original=$( ps -aux | grep "postgres" | grep -v idle )
 
 #echo $original
