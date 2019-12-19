@@ -30,7 +30,7 @@ components=$(kubectl get $RESOURCE -n $NAMESPACE | tail -n +2  | awk '{print $1}
 pvc=$(kubectl get pvc -n $NAMESPACE | tail -n +2 | awk '{ print $1 }')
 pv=$(kubectl get pv | grep $NAMESPACE | awk '{ print $1 }')
 for c in $components ; do
-	kubectl patch $RESOURCE $c -n $NAMESPACE --patch '"spec": { "selector": { "metadata": { "matchLabels": { "client": '$CLIENT' }}}}'
+	kubectl patch $RESOURCE $c -n $NAMESPACE --patch '"spec": { "template": { "metadata": { "labels": { "client": '$CLIENT' }}}}'
 done
 for p in $pvc ; do
 	kubectl patch pvc $p -n $NAMESPACE --patch '"metadata": {"labels": { "client": '$CLIENT' }}'
