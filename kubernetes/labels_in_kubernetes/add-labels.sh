@@ -2,7 +2,7 @@
 
 function usage {
 cat <<EOF
-Usage ./script-labels -r <RESOURCE> -n <NAMESPACE> -c <CLIENT>
+Usage ./add-labels.sh -r <RESOURCE> -n <NAMESPACE> -c <CLIENT>
 Options:
   -r <RESOURCE>  # RESOURCE (RC OR DEPLOYMENT)
   -n <NAMESPACE> # NAMESPACE
