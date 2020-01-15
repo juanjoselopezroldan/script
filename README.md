@@ -1,2 +1,2 @@
 # script
-Scripts de utilidades para la administración de un sistema Linux
+Scripts de utilidades para la administración de un sistemas Linux y Kubernetes
