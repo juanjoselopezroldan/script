@@ -1,0 +1,111 @@
+#!/bin/bash
+
+function usage {
+cat <<EOF
+Usage: kubectl switch -m <MODE> [-s <SERVICES>(postgres | odoo)] -n <NAMESPACE>
+Options:
+  -m <MODE>  # Mode of execution (ON/OFF) activate or deactivate the environment of test
+  -s <SERVICES> # Concrete service to activate or deactivate
+  -n <NAMESPACE>  # Namespace that we want modify
+EOF
+exit 2
+}
+
+#set -x
+function scaler () {
+	MODE=$1
+	SERVICE=$2
+	NAMESPACE=$3
+	environments=$4
+	on_off_env=$5
+if [[ $(echo "$environments" | wc -c) != 1 && $MODE == on ]]; then
+		for env in $environments ; do
+			sleep 2
+			if [[ $(echo "$env" | cut -d , -f 2) == 0 && $(echo "$SERVICE") == 'ALL' ]]; then
+				echo "Activating $(echo $env | cut -d , -f 1 | cut -d / -f 2) of the namespace $NAMESPACE"
+				kubectl scale $(echo "$env" | cut -d , -f 1) --replicas=1 -n $NAMESPACE
+				scale='true'
+			elif [[ $(echo "$env" | cut -d , -f 2) == 0 && $( echo "$env" | cut -d , -f 1 | grep -o "$SERVICE") == $(echo "$SERVICE") ]]; then
+				echo "Activating $(echo $env | cut -d , -f 1 | cut -d / -f 2) of the namespace $NAMESPACE"
+				kubectl scale $(echo "$env" | cut -d , -f 1) --replicas=1 -n $NAMESPACE
+				scale='true'
+			elif [[ $(echo "$environments" | grep -o "$SERVICE") != $(echo "$SERVICE") && $scale != 'not_exist' && $(echo "$SERVICE") != 'ALL' ]]; then
+				echo "The service indicated is not exist, please indicate the name correctly or not indicate the option -s for activate all services"
+				scale='not_exist'
+			elif [[ $(echo "$env" | cut -d , -f 2) == 1 && $( echo "$env" | cut -d , -f 1 | grep -o "$SERVICE") == $(echo "$SERVICE") ]] || [[ $(echo "$env" | cut -d , -f 2) == 1 && $(echo "$SERVICE") == 'ALL' &&  $scale != 'up' ]]; then
+				echo "Error, it is not can activate the environment because already is activate"
+				scale='up'
+			else
+				:
+			fi
+			sleep 2
+		done
+	elif [[ $(echo "$environments" | wc -c) != 1 && $MODE == off ]]; then
+		for env in $environments ; do
+			sleep 2
+			if [[ $(echo "$env" | cut -d , -f 2) == 1 && $(echo "$SERVICE") == 'ALL' ]]; then
+				echo "Desactivating $(echo $env | cut -d , -f 1 | cut -d / -f 2) of the namespace $NAMESPACE"
+				kubectl scale $(echo "$env" | cut -d , -f 1) --replicas=0 -n $NAMESPACE
+				scale='true'
+			elif [[ $(echo "$env" | cut -d , -f 2) == 1 && $( echo "$env" | cut -d , -f 1 | grep -o "$SERVICE") == $(echo "$SERVICE") ]]; then
+				echo "Desactivating $(echo $env | cut -d , -f 1 | cut -d / -f 2) of the namespace $NAMESPACE"
+				kubectl scale $(echo "$env" | cut -d , -f 1) --replicas=0 -n $NAMESPACE
+				scale='true'
+			elif [[ $(echo "$environments" | grep -o "$SERVICE") != $(echo "$SERVICE") && $scale != 'not_exist' && $(echo "$SERVICE") != 'ALL' ]]; then
+				echo "The service indicated is not exist, please indicate the name correctly or not indicate the option -s for activate all services"
+				scale='not_exist'
+			elif [[ $(echo "$env" | cut -d , -f 2) == 0 && $( echo "$env" | cut -d , -f 1 | grep -o "$SERVICE") == $(echo "$SERVICE") ]]  || [[ $(echo "$env" | cut -d , -f 2) == 1 && $(echo "$SERVICE") == 'ALL' &&  $scale != 'down' ]]; then
+				echo "Error, it is not can deactivate the environment because already is deactivate"
+				scale='down'
+			else
+				:
+			fi
+		done
+	else
+		on_off_env=$((on_off_env + 1))
+		return $on_off_env
+	fi
+}
+
+
+SERVICE='ALL'
+if [[ $# -eq 0 ]]; then
+	usage
+else
+	while getopts ":hm:s:hn:h:" OPTIONS; do
+		case "${OPTIONS}" in
+			m) MODE=${OPTARG} ;;
+			s) SERVICE=${OPTARG} ;;
+			n) NAMESPACE=${OPTARG} ;;
+			h) usage ;;
+			*) usage ;;
+		esac
+	done
+fi
+on_off_env='0'
+check_namespace=$(kubectl get namespace $NAMESPACE 2>&1)
+find_namespace=$(echo $check_namespace | echo $?)
+if [[ $find_namespace == 0 ]]; then
+	#all_components=$(kubectl get rc,deploy -n $NAMESPACE)
+	all_components=$(kubectl get rc,deploy -n $NAMESPACE -o custom-columns=TYPE:.kind,NAME:.metadata.name,DESIRED:.spec.replicas \
+		| grep -v TYPE | awk '{end = $1"/"$2","$3; print tolower(end)}')
+	#rcs=$(echo "$all_components" | grep 'replicationcontroller' | tr -s ' ' ',' | cut -d , -f 1-2)
+	rcs=$(echo "$all_components" | grep 'replicationcontroller')
+	scaler "$MODE" "$SERVICE" "$NAMESPACE" "$rcs" "$on_off_env"
+	on_off_env=$?
+	#deployments=$(echo "$all_components" | grep 'deployment' | tr -s ' ' ',' | cut -d , -f 1-2)
+	deployments=$(echo "$all_components" | grep 'deployment')
+	scaler "$MODE" "$SERVICE" "$NAMESPACE" "$deployments" "$on_off_env"
+	on_off_env=$?
+
+
+	if [[ $scale == 'true' ]]; then
+		echo "Changes Finished"
+	elif [[ $on_off_env == '2' ]]; then
+		echo "Please, indicate the option of mode in 'on' or 'off' and check that the namespace exist"
+	else
+		:
+	fi
+else
+	echo "Error, the namespace indicated is not exist"
+fi
