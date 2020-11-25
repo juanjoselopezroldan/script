@@ -1,0 +1,14 @@
+[Unit]
+Description=SUSPEND
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=root
+ExecStart=/usr/bin/suspend.sh  "Number timeout in Seconds"
+
+[Install]
+WantedBy=multi-user.target

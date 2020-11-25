@@ -2,7 +2,7 @@
 
 This script is for automatize the screen lock for the people that have error in the screen lock throug of GUI
 
-The script have by default a value of screen lock, but you can define a custom value in the execution of script, For use of way default in the system you can define a service of systemd and enable the service for that can execute correctly with the system, if you want define this screen lock in your sistem you must follow the next steps.
+The script have by default a value of screen lock expresed in seconds (300 seconds), but you can define a custom value in the execution of script, For use of way default in the system you can define a service of systemd and enable the service for that can execute correctly with the system, if you want define this screen lock in your sistem you must follow the next steps.
 
 - Install package xprintidle
 ```
